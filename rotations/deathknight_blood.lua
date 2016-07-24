@@ -1,70 +1,47 @@
 --[[[
 @module Deathknight Blood Rotation
-@author Kirk24788
-@version 6.2.2
+@author Conor663
+@version 7.0.3
 ]]--
 local spells = kps.spells.deathknight
 local env = kps.env.deathknight
 
-kps.runOnClass("DEATHKNIGHT", function ( )
-    kps.gui.createToggle("noPresence", "Interface\\Icons\\Achievement_BG_killingblow_30", "No Presence!")
-end)
-
 kps.rotations.register("DEATHKNIGHT","BLOOD",
-{
-    -- Blood presence
-    {spells.bloodPresence, 'not kps.noPresence and not player.hasBuff(spells.bloodPresence)'},
-    {spells.hornOfWinter, 'not player.hasBuff(spells.hornOfWinter)'},
-
-
-    -- SHIFT: Death and Decay
-    {spells.deathAndDecay,'keys.shift'},
-
-    -- Def CD's
-    {{"nested"}, 'kps.defensive', {
-        {spells.lichborne, 'player.hp < 0.5 and player.runicPower >= 40 and player.hasTalent(2, 1)'},
-        {spells.deathCoil, 'player.hp < 0.9 and player.runicPower >= 40 and player.hasBuff(spells.lichborne)'},
-        {spells.runeTap, 'player.hp < 0.8 and not player.hasBuff(spells.runeTap)'},
-        {spells.iceboundFortitude, 'player.hp < 0.3'},
-        {spells.vampiricBlood, 'player.hp < 0.4'},
+{	
+	{ spells.gorefiendsGrasp,	'keys.alt'},																				--Gorefiends Grasp
+	
+    {{"nested"}, 				'kps.interrupt and target.isInterruptable', {												--Interrupts
+        {spells.mindFreeze},																								--Mind Freeze
+        {spells.asphyxiate, 	'not spells.mindFreeze.isRecastAt("target")'},												--Asphyxiate
     }},
-
-    -- CD's
-    {{"nested"}, 'kps.cooldowns', {
-        {spells.empowerRuneWeapon, 'target.distance <= 10 and player.allRunes <= 2 and player.bloodRunes <= 1 and player.frostRunes <= 1 and player.unholyRunes <= 1 and player.runicPower < 30'},
-    }},
-
-    -- Interrupt Target
-    {{"nested"}, 'kps.interrupt and target.isInterruptable', {
-        {spells.mindFreeze},
-        {spells.strangulate, 'not spells.mindFreeze.isRecastAt("target")'},
-        {spells.asphyxiate, 'not spells.strangulate.isRecastAt("target")'},
-    }},
-
-    {spells.boneShield,'not player.hasBuff(spells.boneShield)'},
-
-    -- Diseases
-    {spells.unholyBlight,'target.myDebuffDuration(spells.frostFever) < 2'},
-    {spells.unholyBlight,'target.myDebuffDuration(spells.bloodPlague) < 2'},
-    {spells.outbreak,'target.myDebuffDuration(spells.frostFever) < 2'},
-    {spells.outbreak,'target.myDebuffDuration(spells.bloodPlague) < 2'},
-
-    -- Multi Target
-    {{"nested"}, 'activeEnemies.count >= 3', {
-        {spells.bloodBoil, 'target.distance <= 10'},
-    }},
-
-    -- Rotation
-    {spells.deathStrike, 'player.hp < 0.7'},
-    {spells.deathStrike, 'player.buffDuration(spells.bloodShield) <= 4'},
-    {spells.soulReaper, 'player.hp <= 0.35'},
-    {spells.plagueStrike, 'not target.hasMyDebuff(spells.bloodPlague)'},
-    {spells.icyTouch, 'not target.hasMyDebuff(spells.frostFever)'},
-    {spells.deathStrike},
-
-    -- Death Siphon when we need a bit of healing. (talent based)
-    {spells.deathSiphon,'player.hp < 0.6'}, -- moved here, because we heal often more with Death Strike than Death Siphon
-    {spells.deathCoil,'player.runicPower >= 30 and not player.hasBuff(spells.lichborne)'},
-    {spells.bloodTap, 'player.buffStacks(spells.bloodCharge) >= 5'},
+	
+	{{"nested"}, 				'kps.multiTarget', {																		--Multi Target
+		{ spells.deathStrike,	'player.hp < 0.9', "target" },																--DeathStrike self heal
+		{ spells.bloodBoil,		'target.myDebuffDuration(spells.bloodPlague) < 2 and target.distance <= 10', "target" },	--Blood Boil for Blood Plague
+		{ spells.deathsCaress,	'target.myDebuffDuration(spells.bloodPlague) < 2 and target.distance > 10', "target" },		--Death's Caress
+		{ spells.deathStrike, 	'player.buffDuration(spells.bloodShield) <= 4', "target" },									--DeathStrike no Bloodshield
+		{ spells.deathStrike,	'player.runicPower > 60', "target" },														--DeathStrike RP dump
+		{ spells.deathAndDecay,	'keys.shift'},																				--Death and Decay
+		{ spells.marrowrend,	'player.buffStacks(spells.boneShield) < 5', "target" },										--Marrowrend 5
+		{ spells.bloodBoil,		'target.distance <= 10', "target" },														--Blood Boil
+		{ spells.marrowrend,	'player.buffStacks(spells.boneShield) < 8', "target" },										--Marrowrend 8
+		{ spells.marrowrend, 	'player.buffDuration(spells.boneShield) <= 4', "target" },									--Marrowrend Boneshield dropping off
+		{ spells.heartStrike,	'player.buffStacks(spells.boneShield) >= 5', "target" },									--Heart Strike
+		{ spells.deathStrike,	"target" },																					--DeathStrike Filler
+	}},
+	
+	{{"nested"}, 				'not kps.multiTarget', {																	--Single Target
+		{ spells.deathStrike,	'player.hp < 0.9', "target" },																--DeathStrike self heal
+		{ spells.bloodBoil,		'target.myDebuffDuration(spells.bloodPlague) < 2 and target.distance <= 10', "target" },	--Blood Boil for Blood Plague
+		{ spells.deathsCaress,	'target.myDebuffDuration(spells.bloodPlague) < 2 and target.distance > 10', "target" },		--Death's Caress
+		{ spells.deathStrike, 	'player.buffDuration(spells.bloodShield) <= 4', "target" },									--DeathStrike no Bloodshield
+		{ spells.marrowrend,	'player.buffStacks(spells.boneShield) < 5', "target" },										--Marrowrend 5
+		{ spells.deathStrike,	'player.runicPower > 60', "target" },														--DeathStrike RP dump
+		{ spells.deathAndDecay,	'player.hasBuff(spells.crimsonScourge) and keys.shift'},									--Death and Decay
+		{ spells.marrowrend,	'player.buffStacks(spells.boneShield) < 8', "target" },										--Marrowrend 8
+		{ spells.marrowrend, 	'player.buffDuration(spells.boneShield) <= 4', "target" },									--Marrowrend Boneshield dropping off
+		{ spells.heartStrike,	'player.buffDuration(spells.boneShield) > 6', "target" },									--Heart Strike
+		{ spells.deathStrike,	"target" },																					--DeathStrike Filler
+	}},
 }
-,"JPS")
+,"Blood 7.0.3")
